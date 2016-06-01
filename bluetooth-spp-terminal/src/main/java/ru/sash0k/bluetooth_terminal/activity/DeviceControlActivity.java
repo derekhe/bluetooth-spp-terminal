@@ -8,22 +8,13 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.preference.PreferenceManager;
-import android.text.InputFilter;
-import android.text.InputType;
-import android.text.method.ScrollingMovementMethod;
-import android.view.KeyEvent;
-import android.view.View;
-import android.view.inputmethod.EditorInfo;
-import android.widget.EditText;
-import android.widget.TextView;
+import android.util.Log;
 
 import com.actionbarsherlock.app.ActionBar;
 import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuItem;
 
 import java.lang.ref.WeakReference;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 import ru.sash0k.bluetooth_terminal.DeviceData;
 import ru.sash0k.bluetooth_terminal.R;
@@ -35,8 +26,6 @@ public final class DeviceControlActivity extends BaseActivity {
     private static final String DEVICE_NAME = "DEVICE_NAME";
     private static final String LOG = "LOG";
 
-    private static final SimpleDateFormat timeformat = new SimpleDateFormat("HH:mm:ss.SSS");
-
     private static String MSG_NOT_CONNECTED;
     private static String MSG_CONNECTING;
     private static String MSG_CONNECTED;
@@ -44,13 +33,6 @@ public final class DeviceControlActivity extends BaseActivity {
     private static DeviceConnector connector;
     private static BluetoothResponseHandler mHandler;
 
-    private TextView logTextView;
-    private EditText commandEditText;
-
-    // Настройки приложения
-    private boolean hexMode, needClean;
-    private boolean show_timings, show_direction;
-    private String command_ending;
     private String deviceName;
 
     @Override
@@ -70,52 +52,9 @@ public final class DeviceControlActivity extends BaseActivity {
             setDeviceName(savedInstanceState.getString(DEVICE_NAME));
         } else getSupportActionBar().setSubtitle(MSG_NOT_CONNECTED);
 
-        this.logTextView = (TextView) findViewById(R.id.log_textview);
-        this.logTextView.setMovementMethod(new ScrollingMovementMethod());
-        if (savedInstanceState != null)
-            logTextView.setText(savedInstanceState.getString(LOG));
 
-        this.commandEditText = (EditText) findViewById(R.id.command_edittext);
-        // soft-keyboard send button
-        this.commandEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_ACTION_SEND) {
-                    sendCommand(null);
-                    return true;
-                }
-                return false;
-            }
-        });
-        // hardware Enter button
-        this.commandEditText.setOnKeyListener(new View.OnKeyListener() {
-            public boolean onKey(View v, int keyCode, KeyEvent event) {
-                if (event.getAction() == KeyEvent.ACTION_DOWN) {
-                    switch (keyCode) {
-                        case KeyEvent.KEYCODE_ENTER:
-                            sendCommand(null);
-                            return true;
-                        default:
-                            break;
-                    }
-                }
-                return false;
-            }
-        });
     }
     // ==========================================================================
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putString(DEVICE_NAME, deviceName);
-        if (logTextView != null) {
-            final String log = logTextView.getText().toString();
-            outState.putString(LOG, log);
-        }
-    }
-    // ============================================================================
-
 
     /**
      * Проверка готовности соединения
@@ -123,32 +62,28 @@ public final class DeviceControlActivity extends BaseActivity {
     private boolean isConnected() {
         return (connector != null) && (connector.getState() == DeviceConnector.STATE_CONNECTED);
     }
-    // ==========================================================================
-
-
-    /**
-     * Разорвать соединение
-     */
-    private void stopConnection() {
-        if (connector != null) {
-            connector.stop();
-            connector = null;
-            deviceName = null;
-        }
-    }
-    // ==========================================================================
-
-
-    /**
-     * Список устройств для подключения
-     */
-    private void startDeviceListActivity() {
-        stopConnection();
-        Intent serverIntent = new Intent(this, DeviceListActivity.class);
-        startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE);
-    }
     // ============================================================================
 
+    @Override
+    public void onStart() {
+        super.onStart();
+
+
+    }
+    // ==========================================================================
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(DEVICE_NAME, deviceName);
+    }
+    // ==========================================================================
+
+    void setDeviceName(String deviceName) {
+        this.deviceName = deviceName;
+        getSupportActionBar().setSubtitle(deviceName);
+    }
+    // ============================================================================
 
     /**
      * Обработка аппаратной кнопки "Поиск"
@@ -162,94 +97,27 @@ public final class DeviceControlActivity extends BaseActivity {
     }
     // ==========================================================================
 
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getSupportMenuInflater().inflate(R.menu.device_control_activity, menu);
-        return true;
+    /**
+     * Список устройств для подключения
+     */
+    private void startDeviceListActivity() {
+        stopConnection();
+        Intent serverIntent = new Intent(this, DeviceListActivity.class);
+        startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE);
     }
     // ============================================================================
-
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-
-            case R.id.menu_search:
-                if (super.isAdapterReady()) {
-                    if (isConnected()) stopConnection();
-                    else startDeviceListActivity();
-                } else {
-                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                    startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-                }
-                return true;
-
-            case R.id.menu_clear:
-                if (logTextView != null) logTextView.setText("");
-                return true;
-
-            case R.id.menu_send:
-                if (logTextView != null) {
-                    final String msg = logTextView.getText().toString();
-                    final Intent intent = new Intent(Intent.ACTION_SEND);
-                    intent.setType("text/plain");
-                    intent.putExtra(Intent.EXTRA_TEXT, msg);
-                    startActivity(Intent.createChooser(intent, getString(R.string.menu_send)));
-                }
-                return true;
-
-            case R.id.menu_settings:
-                final Intent intent = new Intent(this, SettingsActivity.class);
-                startActivity(intent);
-                return true;
-
-            default:
-                return super.onOptionsItemSelected(item);
-        }
-    }
-    // ============================================================================
-
-
-    @Override
-    public void onStart() {
-        super.onStart();
-
-        // hex mode
-        final String mode = Utils.getPrefence(this, getString(R.string.pref_commands_mode));
-        this.hexMode = mode.equals("HEX");
-        if (hexMode) {
-            commandEditText.setInputType(InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
-            commandEditText.setFilters(new InputFilter[]{new Utils.InputFilterHex()});
-        } else {
-            commandEditText.setInputType(InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-            commandEditText.setFilters(new InputFilter[]{});
-        }
-
-        // Окончание строки
-        this.command_ending = getCommandEnding();
-
-        // Формат отображения лога команд
-        this.show_timings = Utils.getBooleanPrefence(this, getString(R.string.pref_log_timing));
-        this.show_direction = Utils.getBooleanPrefence(this, getString(R.string.pref_log_direction));
-        this.needClean = Utils.getBooleanPrefence(this, getString(R.string.pref_need_clean));
-    }
-    // ============================================================================
-
 
     /**
-     * Получить из настроек признак окончания команды
+     * Разорвать соединение
      */
-    private String getCommandEnding() {
-        String result = Utils.getPrefence(this, getString(R.string.pref_commands_ending));
-        if (result.equals("\\r\\n")) result = "\r\n";
-        else if (result.equals("\\n")) result = "\n";
-        else if (result.equals("\\r")) result = "\r";
-        else result = "";
-        return result;
+    private void stopConnection() {
+        if (connector != null) {
+            connector.stop();
+            connector = null;
+            deviceName = null;
+        }
     }
     // ============================================================================
-
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -272,8 +140,7 @@ public final class DeviceControlActivity extends BaseActivity {
                 break;
         }
     }
-    // ==========================================================================
-
+    // ============================================================================
 
     /**
      * Установка соединения с устройством
@@ -289,65 +156,45 @@ public final class DeviceControlActivity extends BaseActivity {
             Utils.log("setupConnector failed: " + e.getMessage());
         }
     }
+    // ============================================================================
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getSupportMenuInflater().inflate(R.menu.device_control_activity, menu);
+        return true;
+    }
     // ==========================================================================
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
 
-    /**
-     * Отправка команды устройству
-     */
-    public void sendCommand(View view) {
-        if (commandEditText != null) {
-            String commandString = commandEditText.getText().toString();
-            if (commandString.isEmpty()) return;
+            case R.id.menu_search:
+                if (super.isAdapterReady()) {
+                    if (isConnected()) stopConnection();
+                    else startDeviceListActivity();
+                } else {
+                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                    startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+                }
+                return true;
 
-            // Дополнение команд в hex
-            if (hexMode && (commandString.length() % 2 == 1)) {
-                commandString = "0" + commandString;
-                commandEditText.setText(commandString);
-            }
-            byte[] command = (hexMode ? Utils.toHex(commandString) : commandString.getBytes());
-            if (command_ending != null) command = Utils.concat(command, command_ending.getBytes());
-            if (isConnected()) {
-                connector.write(command);
-                appendLog(commandString, hexMode, true, needClean);
-            }
+            default:
+                return super.onOptionsItemSelected(item);
         }
     }
     // ==========================================================================
 
-
     /**
-     * Добавление ответа в лог
-     *
-     * @param message  - текст для отображения
-     * @param outgoing - направление передачи
+     * Получить из настроек признак окончания команды
      */
-    void appendLog(String message, boolean hexMode, boolean outgoing, boolean clean) {
-
-        StringBuilder msg = new StringBuilder();
-        if (show_timings) msg.append("[").append(timeformat.format(new Date())).append("]");
-        if (show_direction) {
-            final String arrow = (outgoing ? " << " : " >> ");
-            msg.append(arrow);
-        } else msg.append(" ");
-
-        msg.append(hexMode ? Utils.printHex(message) : message);
-        if (outgoing) msg.append('\n');
-        logTextView.append(msg);
-
-        final int scrollAmount = logTextView.getLayout().getLineTop(logTextView.getLineCount()) - logTextView.getHeight();
-        if (scrollAmount > 0)
-            logTextView.scrollTo(0, scrollAmount);
-        else logTextView.scrollTo(0, 0);
-
-        if (clean) commandEditText.setText("");
-    }
-    // =========================================================================
-
-
-    void setDeviceName(String deviceName) {
-        this.deviceName = deviceName;
-        getSupportActionBar().setSubtitle(deviceName);
+    private String getCommandEnding() {
+        String result = Utils.getPrefence(this, getString(R.string.pref_commands_ending));
+        if (result.equals("\\r\\n")) result = "\r\n";
+        else if (result.equals("\\n")) result = "\n";
+        else if (result.equals("\\r")) result = "\r";
+        else result = "";
+        return result;
     }
     // ==========================================================================
 
@@ -391,7 +238,7 @@ public final class DeviceControlActivity extends BaseActivity {
                     case MESSAGE_READ:
                         final String readMessage = (String) msg.obj;
                         if (readMessage != null) {
-                            activity.appendLog(readMessage, false, false, activity.needClean);
+                            Log.e(LOG, readMessage);
                         }
                         break;
 
