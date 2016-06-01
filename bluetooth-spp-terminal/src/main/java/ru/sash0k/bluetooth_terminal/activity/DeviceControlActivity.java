@@ -1,20 +1,39 @@
 package ru.sash0k.bluetooth_terminal.activity;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.preference.PreferenceManager;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.Toast;
 
 import com.actionbarsherlock.app.ActionBar;
 import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuItem;
+import com.kbeanie.multipicker.api.ImagePicker;
+import com.kbeanie.multipicker.api.Picker;
+import com.kbeanie.multipicker.api.callbacks.ImagePickerCallback;
+import com.kbeanie.multipicker.api.entity.ChosenImage;
 
 import java.lang.ref.WeakReference;
+import java.util.List;
 
 import ru.sash0k.bluetooth_terminal.DeviceData;
 import ru.sash0k.bluetooth_terminal.R;
@@ -23,9 +42,9 @@ import ru.sash0k.bluetooth_terminal.bluetooth.DeviceConnector;
 import ru.sash0k.bluetooth_terminal.bluetooth.DeviceListActivity;
 
 public final class DeviceControlActivity extends BaseActivity {
+    public static final String WALLPAPER = "wallpaper";
     private static final String DEVICE_NAME = "DEVICE_NAME";
     private static final String LOG = "LOG";
-
     private static String MSG_NOT_CONNECTED;
     private static String MSG_CONNECTING;
     private static String MSG_CONNECTED;
@@ -34,6 +53,17 @@ public final class DeviceControlActivity extends BaseActivity {
     private static BluetoothResponseHandler mHandler;
 
     private String deviceName;
+
+    private Button btnChangeBackground;
+    private CheckBox chkCheckConnection;
+    private Button btnChangeDefault;
+    private ImagePicker imagePicker;
+    private ImageView background;
+    private DisplayMetrics metrics;
+    private String preference = "BT";
+    private SharedPreferences sharedpreferences;
+    private View relativeAfterConnection;
+    private Button connect;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,7 +82,107 @@ public final class DeviceControlActivity extends BaseActivity {
             setDeviceName(savedInstanceState.getString(DEVICE_NAME));
         } else getSupportActionBar().setSubtitle(MSG_NOT_CONNECTED);
 
+        btnChangeBackground = (Button) findViewById(R.id.btnChangeBackground);
+        chkCheckConnection = (CheckBox) findViewById(R.id.chkCloseArduinoIfConnectionLost);
+        btnChangeDefault = (Button) findViewById(R.id.btnChangeDefaultPassword);
+        btnChangeDefault.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showChangeLangDialog();
+            }
+        });
+        connect = (Button) findViewById(R.id.btnConnect);
+        connect.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                relativeAfterConnection.setVisibility(View.VISIBLE);
+            }
+        });
 
+        metrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(metrics);
+
+        btnChangeBackground.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                imagePicker = new ImagePicker(DeviceControlActivity.this);
+                imagePicker.setImagePickerCallback(new ImagePickerCallback() {
+                                                       @Override
+                                                       public void onImagesChosen(List<ChosenImage> images) {
+                                                           Log.e("HI", "HI");
+                                                           String originalPath = images.get(0).getOriginalPath();
+                                                           setWallpaper(originalPath);
+                                                           SharedPreferences.Editor edit = sharedpreferences.edit();
+                                                           edit.putString(WALLPAPER, originalPath);
+                                                           edit.commit();
+                                                       }
+
+                                                       @Override
+                                                       public void onError(String message) {
+                                                           // Do error handling
+                                                           Log.e("Error", "Error");
+                                                       }
+                                                   }
+                );
+
+                imagePicker.pickImage();
+            }
+        });
+
+        background = (ImageView) findViewById(R.id.imgBackground);
+        background.getLayoutParams().height = metrics.heightPixels;
+        background.getLayoutParams().width = metrics.widthPixels;
+        background.requestLayout();
+
+        sharedpreferences = getSharedPreferences(preference, Context.MODE_PRIVATE);
+        String wallpaper = sharedpreferences.getString(WALLPAPER, "");
+        if (!wallpaper.isEmpty()) {
+            setWallpaper(wallpaper);
+        }
+
+        relativeAfterConnection = findViewById(R.id.relativeAfterConnection);
+        relativeAfterConnection.setVisibility(View.INVISIBLE);
+    }
+
+    private void setWallpaper(String originalPath) {
+        Bitmap myBitmap = BitmapFactory
+                .decodeFile(originalPath);
+
+        Bitmap resized = Bitmap
+                .createScaledBitmap(myBitmap,
+                        metrics.heightPixels,
+                        (int) (metrics.heightPixels * myBitmap
+                                .getHeight()
+                                / myBitmap
+                                .getWidth()),
+                        true);
+
+        background.setImageBitmap(resized);
+    }
+
+    public void showChangeLangDialog() {
+        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
+        LayoutInflater inflater = this.getLayoutInflater();
+        final View dialogView = inflater.inflate(R.layout.dialog_default_pwd, null);
+        dialogBuilder.setView(dialogView);
+
+        final EditText edt = (EditText) dialogView.findViewById(R.id.editPassword);
+
+        dialogBuilder.setTitle("Set default password");
+        dialogBuilder.setMessage("Enter text below");
+        dialogBuilder.setPositiveButton("Done", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                Toast.makeText(getApplicationContext(), edt.getText(), Toast.LENGTH_SHORT).show();
+            }
+        });
+        dialogBuilder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+
+            }
+        });
+        AlertDialog b = dialogBuilder.create();
+        b.show();
     }
 
     private boolean isConnected() {
@@ -116,6 +246,10 @@ public final class DeviceControlActivity extends BaseActivity {
                     Utils.log("BT not enabled");
                 }
                 break;
+            case Picker.PICK_IMAGE_DEVICE:
+                if (resultCode == Activity.RESULT_OK) {
+                    imagePicker.submit(data);
+                }
         }
     }
 
