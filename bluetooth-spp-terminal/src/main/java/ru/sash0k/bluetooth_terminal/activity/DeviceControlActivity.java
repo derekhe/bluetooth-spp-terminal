@@ -54,15 +54,10 @@ public final class DeviceControlActivity extends BaseActivity {
 
 
     }
-    // ==========================================================================
 
-    /**
-     * Проверка готовности соединения
-     */
     private boolean isConnected() {
         return (connector != null) && (connector.getState() == DeviceConnector.STATE_CONNECTED);
     }
-    // ============================================================================
 
     @Override
     public void onStart() {
@@ -70,46 +65,30 @@ public final class DeviceControlActivity extends BaseActivity {
 
 
     }
-    // ==========================================================================
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putString(DEVICE_NAME, deviceName);
     }
-    // ==========================================================================
 
     void setDeviceName(String deviceName) {
         this.deviceName = deviceName;
         getSupportActionBar().setSubtitle(deviceName);
     }
-    // ============================================================================
 
-    /**
-     * Обработка аппаратной кнопки "Поиск"
-     *
-     * @return
-     */
     @Override
     public boolean onSearchRequested() {
         if (super.isAdapterReady()) startDeviceListActivity();
         return false;
     }
-    // ==========================================================================
 
-    /**
-     * Список устройств для подключения
-     */
     private void startDeviceListActivity() {
         stopConnection();
         Intent serverIntent = new Intent(this, DeviceListActivity.class);
         startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE);
     }
-    // ============================================================================
 
-    /**
-     * Разорвать соединение
-     */
     private void stopConnection() {
         if (connector != null) {
             connector.stop();
@@ -117,7 +96,6 @@ public final class DeviceControlActivity extends BaseActivity {
             deviceName = null;
         }
     }
-    // ============================================================================
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -140,7 +118,7 @@ public final class DeviceControlActivity extends BaseActivity {
                 break;
         }
     }
-    // ============================================================================
+
 
     /**
      * Установка соединения с устройством
@@ -156,14 +134,14 @@ public final class DeviceControlActivity extends BaseActivity {
             Utils.log("setupConnector failed: " + e.getMessage());
         }
     }
-    // ============================================================================
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getSupportMenuInflater().inflate(R.menu.device_control_activity, menu);
         return true;
     }
-    // ==========================================================================
+
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -183,24 +161,8 @@ public final class DeviceControlActivity extends BaseActivity {
                 return super.onOptionsItemSelected(item);
         }
     }
-    // ==========================================================================
 
-    /**
-     * Получить из настроек признак окончания команды
-     */
-    private String getCommandEnding() {
-        String result = Utils.getPrefence(this, getString(R.string.pref_commands_ending));
-        if (result.equals("\\r\\n")) result = "\r\n";
-        else if (result.equals("\\n")) result = "\n";
-        else if (result.equals("\\r")) result = "\r";
-        else result = "";
-        return result;
-    }
-    // ==========================================================================
 
-    /**
-     * Обработчик приёма данных от bluetooth-потока
-     */
     private static class BluetoothResponseHandler extends Handler {
         private WeakReference<DeviceControlActivity> mActivity;
 
@@ -257,5 +219,5 @@ public final class DeviceControlActivity extends BaseActivity {
             }
         }
     }
-    // ==========================================================================
+
 }
