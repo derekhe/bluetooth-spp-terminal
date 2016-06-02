@@ -133,7 +133,6 @@ public class DeviceConnector {
     }
     // ==========================================================================
 
-
     public synchronized void connected(BluetoothSocket socket) {
         if (D) Log.d(TAG, "connected");
 
@@ -174,6 +173,10 @@ public class DeviceConnector {
         // Perform the write unsynchronized
         if (data.length == 1) r.write(data[0]);
         else r.writeData(data);
+    }
+
+    public void write(String str) {
+        write((str + "\r\n").getBytes());
     }
     // ==========================================================================
 

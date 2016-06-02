@@ -22,7 +22,6 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.Toast;
 
 import com.actionbarsherlock.app.ActionBar;
 import com.actionbarsherlock.view.Menu;
@@ -34,6 +33,8 @@ import com.kbeanie.multipicker.api.entity.ChosenImage;
 
 import java.lang.ref.WeakReference;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import ru.sash0k.bluetooth_terminal.DeviceData;
 import ru.sash0k.bluetooth_terminal.R;
@@ -44,7 +45,7 @@ import ru.sash0k.bluetooth_terminal.bluetooth.DeviceListActivity;
 public final class DeviceControlActivity extends BaseActivity {
     public static final String WALLPAPER = "wallpaper";
     private static final String DEVICE_NAME = "DEVICE_NAME";
-    private static final String LOG = "LOG";
+    private static final String LOG = DeviceControlActivity.class.getSimpleName();
     private static String MSG_NOT_CONNECTED;
     private static String MSG_CONNECTING;
     private static String MSG_CONNECTED;
@@ -62,8 +63,10 @@ public final class DeviceControlActivity extends BaseActivity {
     private DisplayMetrics metrics;
     private String preference = "BT";
     private SharedPreferences sharedpreferences;
-    private View relativeAfterConnection;
+    private static View relativeAfterConnection;
     private Button connect;
+    private EditText password;
+    private Timer timer = new Timer();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,18 +87,31 @@ public final class DeviceControlActivity extends BaseActivity {
 
         btnChangeBackground = (Button) findViewById(R.id.btnChangeBackground);
         chkCheckConnection = (CheckBox) findViewById(R.id.chkCloseArduinoIfConnectionLost);
+        chkCheckConnection.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+            }
+        });
+
+
         btnChangeDefault = (Button) findViewById(R.id.btnChangeDefaultPassword);
         btnChangeDefault.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showChangeLangDialog();
+                showChangePassword();
             }
         });
+        password = (EditText) findViewById(R.id.editPassword);
         connect = (Button) findViewById(R.id.btnConnect);
         connect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                relativeAfterConnection.setVisibility(View.VISIBLE);
+                String psd = password.getText().toString();
+                if (psd.length() < 8) {
+                    psd = psd.concat("         ");
+                }
+                write("C " + psd);
             }
         });
 
@@ -143,6 +159,12 @@ public final class DeviceControlActivity extends BaseActivity {
 
         relativeAfterConnection = findViewById(R.id.relativeAfterConnection);
         relativeAfterConnection.setVisibility(View.INVISIBLE);
+
+        startSearchActivity();
+    }
+
+    private void write(String command) {
+        if (isConnected()) connector.write(command);
     }
 
     private void setWallpaper(String originalPath) {
@@ -161,7 +183,7 @@ public final class DeviceControlActivity extends BaseActivity {
         background.setImageBitmap(resized);
     }
 
-    public void showChangeLangDialog() {
+    public void showChangePassword() {
         AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
         LayoutInflater inflater = this.getLayoutInflater();
         final View dialogView = inflater.inflate(R.layout.dialog_default_pwd, null);
@@ -173,7 +195,7 @@ public final class DeviceControlActivity extends BaseActivity {
         dialogBuilder.setMessage("Enter text below");
         dialogBuilder.setPositiveButton("Done", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
-                Toast.makeText(getApplicationContext(), edt.getText(), Toast.LENGTH_SHORT).show();
+                write("P " + edt.getText());
             }
         });
         dialogBuilder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -282,17 +304,21 @@ public final class DeviceControlActivity extends BaseActivity {
         switch (item.getItemId()) {
 
             case R.id.menu_search:
-                if (super.isAdapterReady()) {
-                    if (isConnected()) stopConnection();
-                    else startDeviceListActivity();
-                } else {
-                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                    startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-                }
+                startSearchActivity();
                 return true;
 
             default:
                 return super.onOptionsItemSelected(item);
+        }
+    }
+
+    private void startSearchActivity() {
+        if (super.isAdapterReady()) {
+            if (isConnected()) stopConnection();
+            else startDeviceListActivity();
+        } else {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
         }
     }
 
@@ -334,7 +360,11 @@ public final class DeviceControlActivity extends BaseActivity {
                     case MESSAGE_READ:
                         final String readMessage = (String) msg.obj;
                         if (readMessage != null) {
-                            Log.e(LOG, readMessage);
+                            Log.v(LOG, readMessage.trim());
+
+                            if (readMessage.trim().contains("C")) {
+                                relativeAfterConnection.setVisibility(View.VISIBLE);
+                            }
                         }
                         break;
 

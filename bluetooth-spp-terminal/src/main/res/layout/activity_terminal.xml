@@ -36,14 +36,6 @@
         android:layout_height="match_parent"
         android:layout_margin="10dp">
 
-        <Button
-            android:id="@+id/btnScan"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentLeft="false"
-            android:layout_alignParentStart="true"
-            android:text="Search Device"/>
-
 
         <TextView
             android:id="@+id/txtPassword"
@@ -51,7 +43,6 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"
-            android:layout_below="@id/btnScan"
             android:text="Please enter password to connect"
             android:textAppearance="?android:attr/textAppearanceMedium"/>
 
@@ -61,7 +52,9 @@
             android:layout_height="wrap_content"
             android:layout_below="@id/txtPassword"
             android:ems="10"
-            android:inputType="textPassword"/>
+            android:inputType="textPassword"
+            android:text="12345678"
+            />
 
         <Button
             android:id="@+id/btnConnect"
@@ -76,7 +69,7 @@
             android:id="@+id/chkCloseArduinoIfConnectionLost"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Turn off arduion when disconnected"
+            android:text="Let it turn off when disconnected"
             android:layout_below="@id/btnConnect"
             />
 

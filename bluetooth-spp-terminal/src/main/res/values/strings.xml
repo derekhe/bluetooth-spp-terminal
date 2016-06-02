@@ -11,9 +11,9 @@
 
     <string name="app_name">Bluetooth terminal</string>
 
-    <string name="msg_not_connected">not connected</string>
-    <string name="msg_connecting">connecting…</string>
-    <string name="msg_connected">connected</string>
+    <string name="msg_not_connected">bluetooth not connected</string>
+    <string name="msg_connecting">connecting to bluetooth</string>
+    <string name="msg_connected">connected to bluetooth</string>
 
     <string name="action_bluetooth">on/off</string>
     <string name="no_bt_support">Your device doesn\'t support bluetooth.</string>
