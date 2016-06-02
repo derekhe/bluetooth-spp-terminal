@@ -67,6 +67,7 @@ public final class DeviceControlActivity extends BaseActivity {
     private Button connect;
     private EditText password;
     private Timer timer = new Timer();
+    private boolean icChangingWallpaper = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,12 +88,17 @@ public final class DeviceControlActivity extends BaseActivity {
 
         btnChangeBackground = (Button) findViewById(R.id.btnChangeBackground);
         chkCheckConnection = (CheckBox) findViewById(R.id.chkCloseArduinoIfConnectionLost);
-        chkCheckConnection.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
 
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                if (chkCheckConnection.isChecked()) {
+                    write("I");
+                } else {
+                    write("N");
+                }
             }
-        });
+        }, 0, 500);
 
 
         btnChangeDefault = (Button) findViewById(R.id.btnChangeDefaultPassword);
@@ -122,6 +128,7 @@ public final class DeviceControlActivity extends BaseActivity {
             @Override
             public void onClick(View v) {
 
+                icChangingWallpaper = true;
                 imagePicker = new ImagePicker(DeviceControlActivity.this);
                 imagePicker.setImagePickerCallback(new ImagePickerCallback() {
                                                        @Override
@@ -163,6 +170,21 @@ public final class DeviceControlActivity extends BaseActivity {
         startSearchActivity();
     }
 
+    @Override
+    public synchronized void onPause() {
+        super.onPause();
+
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (icChangingWallpaper) return;
+        if (!chkCheckConnection.isChecked()) return;
+        write("D");
+        relativeAfterConnection.setVisibility(View.INVISIBLE);
+    }
+
     private void write(String command) {
         if (isConnected()) connector.write(command);
     }
@@ -181,6 +203,7 @@ public final class DeviceControlActivity extends BaseActivity {
                         true);
 
         background.setImageBitmap(resized);
+        icChangingWallpaper = false;
     }
 
     public void showChangePassword() {
@@ -239,6 +262,7 @@ public final class DeviceControlActivity extends BaseActivity {
         stopConnection();
         Intent serverIntent = new Intent(this, DeviceListActivity.class);
         startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE);
+        relativeAfterConnection.setVisibility(View.INVISIBLE);
     }
 
     private void stopConnection() {

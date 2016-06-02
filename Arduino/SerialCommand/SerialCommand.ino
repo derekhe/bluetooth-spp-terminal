@@ -2,11 +2,15 @@
 #include <SerialCommand.h>
 #include <EEPROM.h>
 #include <SoftwareSerial.h>
+#include <Timer.h>
 
 #define arduinoLED 13   // Arduino LED on board
 
-SoftwareSerial softSerial = SoftwareSerial(10,11);
+SoftwareSerial softSerial = SoftwareSerial(10, 11);
 SerialCommand sCmd(softSerial);
+bool checkPing = false;
+bool pingReceived = false;
+Timer t;
 
 void setup() {
   pinMode(arduinoLED, OUTPUT);      // Configure the onboard LED for output
@@ -20,25 +24,37 @@ void setup() {
   sCmd.addCommand("P",   changePassword);
   sCmd.addCommand("I",  pingOn);
   sCmd.addCommand("N", pingOff);
-  sCmd.addCommand("L", ping);
   sCmd.addDefaultHandler(unrecognized);      // Handler for command that isn't matched  (says "What?")
   softSerial.println("Ready");
+  t.every(1000, pingCheck);
 }
 
-void pingOn(){
-  
+void pingCheck() {
+  if (!checkPing) return;
+  softSerial.println("checkping");
+  if (pingReceived) {
+    pingReceived = false;
+    return;
+  } else {
+    disconnectTo();
+  }
 }
 
-void pingOff(){
-  
+void pingOn() {
+  checkPing = true;
+  pingReceived = true;
+  softSerial.println("ping");
 }
 
-void ping(){
-  
+void pingOff() {
+  checkPing = false;
+  pingReceived = false;
+  softSerial.println("pingOff");
 }
 
 void loop() {
-  sCmd.readSerial();     // We don't do much, just process serial commands
+  sCmd.readSerial();     // We don't do much, just process serial command
+  t.update();
 }
 
 void changePassword() {
@@ -70,9 +86,9 @@ void connectTo() {
     }
 
     password[8] = '\0';
-    
-    if(strlen(arg)>8){
-      arg[8]='\0';
+
+    if (strlen(arg) > 8) {
+      arg[8] = '\0';
     }
 
     unsigned char set = EEPROM.read(8);
@@ -94,12 +110,7 @@ void connectTo() {
   }
 }
 
-void LED_off() {
-  softSerial.println("LED off");
-  digitalWrite(arduinoLED, LOW);
-}
-
 // This gets set as the default handler, and gets called when no other command matches.
-void unrecognized(){
+void unrecognized() {
   softSerial.println("What?");
 }
