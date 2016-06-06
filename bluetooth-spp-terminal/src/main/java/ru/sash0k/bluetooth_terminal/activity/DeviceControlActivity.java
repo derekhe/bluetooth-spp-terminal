@@ -163,6 +163,9 @@ public final class DeviceControlActivity extends BaseActivity {
         if (!wallpaper.isEmpty()) {
             setWallpaper(wallpaper);
         }
+        else{
+            background.setImageResource(R.drawable.wallpaper);
+        }
 
         relativeAfterConnection = findViewById(R.id.relativeAfterConnection);
         relativeAfterConnection.setVisibility(View.INVISIBLE);
