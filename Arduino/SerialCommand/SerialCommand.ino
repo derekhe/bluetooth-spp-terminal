@@ -12,9 +12,26 @@ bool checkPing = false;
 bool pingReceived = false;
 Timer t;
 
+void ledOff(){
+  digitalWrite(5, LOW);
+  digitalWrite(6, LOW);
+  digitalWrite(7, LOW);
+  digitalWrite(arduinoLED, LOW);
+}
+
+void ledOn(){
+ digitalWrite(5, HIGH);
+  digitalWrite(6, HIGH);
+  digitalWrite(7, HIGH);
+  digitalWrite(arduinoLED, HIGH); 
+}
+
 void setup() {
   pinMode(arduinoLED, OUTPUT);      // Configure the onboard LED for output
-  digitalWrite(arduinoLED, LOW);    // default to LED off
+  pinMode(5, OUTPUT);
+  pinMode(6, OUTPUT);
+  pinMode(7, OUTPUT);
+  ledOff();
 
   softSerial.begin(9600);
 
@@ -73,7 +90,7 @@ void changePassword() {
 }
 
 void disconnectTo() {
-  digitalWrite(arduinoLED, LOW);
+  ledOff();
 }
 
 void connectTo() {
@@ -99,12 +116,12 @@ void connectTo() {
     if (set == 0XEE) {
       if (strcmp(arg, password) == 0) {
         softSerial.println("C");
-        digitalWrite(arduinoLED, HIGH);
+        ledOn();
       }
     } else {
       if (strcmp(arg, "12345678") == 0) {
         softSerial.println("C");
-        digitalWrite(arduinoLED, HIGH);
+        ledOn();
       }
     }
   }
